@@ -1,4 +1,5 @@
-# for reading DICOM files obtained from ultrasound machines, letting user draw ROI, and outputting intensity-time graph
+# for reading DICOM files obtained from ultrasound machines,
+# letting user draw ROI, and outputting intensity-time graph
 
 import sys
 import matplotlib.pyplot as plt
@@ -18,13 +19,14 @@ class ROIPolygon(object):
 									markerprops = dict(mec = 'g', mfc = 'g', alpha = 1))
 		self.path = None
 		self.mask = np.zeros([row, col], dtype = int)
+		self.masked_dcm = np.zeros([row, col, 3])
 
 	def onselect(self, verts):
 		path = Path(verts)
 		self.canvas.draw_idle()
 		self.path = path
 
-	def get_mask(self, row, col):
+	def get_mask(self, row, col, dcm, frame_n):
 		for i in range(row):
 			for j in range(col):
 				# matplotlib.Path.contains_points returns True if the point is inside the ROI
@@ -33,24 +35,28 @@ class ROIPolygon(object):
 					 self.mask[i][j] = 1
 				 else:
 					 self.mask[i][j] = 0
+		# Extracting pixel information from .dcm file based on ROI
+		for i in range(row):
+			for j in range(col):
+				if self.mask[i][j] == 1:
+					self.masked_dcm[i][j] = dcm.pixel_array[frame_n][i][j]
+				else:
+					self.masked_dcm[i][j] = 0
 
+# Converting rgb image to grayscale.
 def rgb2gray(rgb):
-	# from stackoverflow
 	return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
 
-ds = pydicom.dcmread(sys.argv[1])
-
-# pixel data stored as 4D numpy array
-# (frame number, row, cols, rgb channel)
-# pixel_array[int] slices one frame where int is frame number
+# Reading the .dcm file. Pixel data accessed via pixel_array and is stored as a
+# 4D numpy array - (frame number, row, cols, rgb channel)
+dcm = pydicom.dcmread(sys.argv[1])
 frame_n = int(input("Enter desired frame to view: "))
-img = ds.pixel_array[frame_n]
+row = dcm.pixel_array.shape[1] # number of rows of pixels in image
+col = dcm.pixel_array.shape[2] # number of columns of pixels in image
 
-row = ds.pixel_array.shape[1] # number of row of pixels in image
-col = ds.pixel_array.shape[2] # number of columns of pixels in image
-
-
-# Drawing ROI on selected frame
+# Drawing ROI on selected frame. If ROI is decided by user to be incorrect,
+# they have the option to redraw.
+img = dcm.pixel_array[frame_n]
 q = 'n'
 while q == 'n' or q == 'N':
 	fig, ax = plt.subplots()
@@ -58,13 +64,13 @@ while q == 'n' or q == 'N':
 	plt.show(block = False)
 
 	print('Draw desired ROI')
-	roi1 = ROIPolygon(ax, row, col)
+	roi = ROIPolygon(ax, row, col)
 
 	plt.imshow(img)
 	plt.show()
 
 	# Overlaying ROI onto image
-	patch = patches.PathPatch(roi1.path,
+	patch = patches.PathPatch(roi.path,
 							facecolor = 'green',
 							alpha = 0.5)
 	fig, ax = plt.subplots()
@@ -80,31 +86,22 @@ while q == 'n' or q == 'N':
 		else:
 			print('Please enter y or n')
 
-# Drawing mask
-mask_test = roi1.get_mask(row, col)
-masked_ds = np.zeros([row, col, 3]) # empty matrix to fill in
+# The previously drawn ROI is used to create a mask to extract the ROI from the
+# original .dcm frame
+roi.get_mask(row, col, dcm, frame_n)
+gray_masked_dcm = rgb2gray(roi.masked_dcm)
 
-for i in range(row):
-	for j in range(col):
-		if roi1.mask[i][j] == 1:
-			masked_ds[i][j] = ds.pixel_array[frame_n][i][j]
-		else:
-			masked_ds[i][j] = 0
-
-gray_masked_ds = rgb2gray(masked_ds)
-
+# Test plots and info
 plt.figure(1)
-
 plt.subplot(131)
 plt.imshow(img)
 
 plt.subplot(132)
-plt.imshow(gray_masked_ds, cmap = 'gray')
+plt.imshow(gray_masked_dcm, cmap = 'gray')
 
 plt.subplot(133)
-plt.imshow(roi1.mask)
+plt.imshow(roi.mask)
 plt.show()
 
-print(masked_ds.shape)
-mean_masked_ds = np.mean(gray_masked_ds)
-print(mean_masked_ds)
+mean_masked_dcm = np.mean(gray_masked_dcm)
+print(mean_masked_dcm)
