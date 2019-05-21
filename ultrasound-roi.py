@@ -18,8 +18,7 @@ class ROIPolygon(object):
 									lineprops = dict(color = 'g', alpha = 1),
 									markerprops = dict(mec = 'g', mfc = 'g', alpha = 1))
 		self.path = None
-		# self.mask = np.zeros([row, col], dtype = int)
-		self.masked_dcm = np.zeros([row, col, 3])
+		# self.masked_dcm = np.zeros([row, col, 3])
 
 	def onselect(self, verts):
 		path = Path(verts)
@@ -27,22 +26,18 @@ class ROIPolygon(object):
 		self.path = path
 
 	def get_mask(self, row, col, dcm_vid, frame_n):
-		mask = np.zeros([row, col], dtype = int)
+		masked_dcm = np.zeros([row, col, 3])
 		for i in np.arange(row):
 			for j in np.arange(col):
 				# matplotlib.Path.contains_points returns True if the point is inside the ROI
 				# Path vertices are considered in different order than numpy arrays
 				 if self.path.contains_points([(j,i)]) == [True]:
-					 mask[i][j] = 1
+					 # self.masked_dcm[i][j] = dcm_vid.pixel_array[frame_n][i][j]
+					 masked_dcm[i][j] = dcm_vid.pixel_array[frame_n][i][j]
 				 else:
-					 mask[i][j] = 0
-		# Extracting pixel information from .dcm file based on ROI
-		for i in np.arange(row):
-			for j in np.arange(col):
-				if mask[i][j] == 1:
-					self.masked_dcm[i][j] = dcm_vid.pixel_array[frame_n][i][j]
-				else:
-					self.masked_dcm[i][j] = 0
+					 # self.masked_dcm[i][j] = 0
+					 masked_dcm[i][j] = 0
+		return masked_dcm
 
 # Converting rgb image to grayscale.
 def rgb2gray(rgb):
@@ -89,33 +84,37 @@ while q == 'n' or q == 'N':
 
 # The previously drawn ROI is used to create a mask to extract the ROI from the
 # original .dcm frame
-roi.get_mask(r, c, dcm, frame)
-#gray_masked_dcm = rgb2gray(roi.masked_dcm)
+# roi.get_mask(r, c, dcm, frame)
+# gray_masked_dcm = rgb2gray(roi.masked_dcm)
+gray_masked_dcm = rgb2gray(roi.get_mask(r, c, dcm, frame))
 
 # Test plots and info
-# plt.figure(1)
-# plt.subplot(131)
-# plt.imshow(img)
-#
-# plt.subplot(132)
-# plt.imshow(gray_masked_dcm, cmap = 'gray')
-#
+plt.figure(1)
+plt.subplot(121)
+plt.imshow(img)
+
+plt.subplot(122)
+plt.imshow(gray_masked_dcm, cmap = 'gray')
+
 # plt.subplot(133)
-# plt.imshow(roi.mask)
-# plt.show()
-#
-# mean_masked_dcm = np.mean(gray_masked_dcm)
-# print(mean_masked_dcm)
+# plt.imshow(roi.masked_dcm)
+plt.show()
+
+mean_masked_dcm = np.mean(gray_masked_dcm)
+print(mean_masked_dcm)
 
 # Loop through all frames in video
 gray_dcm_mean = []
 number_frames = dcm.pixel_array.shape[0]
+index = 0
 for i in np.arange(number_frames):
-	roi.get_mask(r, c, dcm, i)
-	g = rgb2gray(roi.masked_dcm)
+	# roi.get_mask(r, c, dcm, i)
+	g = rgb2gray(roi.get_mask(r, c, dcm, i))
 	avg = np.mean(g)
 	gray_dcm_mean.append(avg)
+	index += 1
+	print(index)
 
 # Plot the mean vs frames
-plt.plot(np.arange(number_frames), gray_dcm_mean)
-plt.show()
+# plt.plot(np.arange(number_frames), gray_dcm_mean)
+# plt.show()
