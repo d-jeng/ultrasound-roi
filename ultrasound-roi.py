@@ -26,23 +26,32 @@ class ROIPolygon(object):
 		self.path = path
 
 def draw_roi(img, row, col):
-	fig, ax = plt.subplots()
-	plt.imshow(img)
-	plt.show(block = False)
-	print('Draw desired ROI')
+	q = 'n'
+	while q == 'n' or q == 'N':
+		fig, ax = plt.subplots()
+		plt.imshow(img)
+		plt.show(block = False)
+		print('Draw desired ROI')
 
-	roi = ROIPolygon(ax, row, col)
+		roi = ROIPolygon(ax, row, col)
 
-	plt.imshow(img)
-	plt.show()
-	# Overlaying ROI onto image
-	patch = patches.PathPatch(roi.path,
-							facecolor = 'green',
-							alpha = 0.5)
-	fig, ax = plt.subplots()
-	plt.imshow(img)
-	ax.add_patch(patch)
-	plt.show(block = False)
+		plt.imshow(img)
+		plt.show()
+		# Overlaying ROI onto image
+		patch = patches.PathPatch(roi.path,
+								facecolor = 'green',
+								alpha = 0.5)
+		fig, ax = plt.subplots()
+		plt.imshow(img)
+		ax.add_patch(patch)
+		plt.show(block = False)
+
+		q = input("Is this ROI correct? y/n: ")
+		while True:
+			if q == 'y' or q == 'Y' or q == 'n' or q == 'N':
+				break
+			else:
+				print('Please enter y or n')
 	return roi
 
 # To initialize mask
@@ -75,62 +84,49 @@ def rgb2gray(rgb):
 
 # Reading the .dcm file. Pixel data accessed via pixel_array and is stored as a
 # 4D numpy array - (frame number, rows, columns, rgb channel)
-d_pix_arr = pydicom.dcmread(sys.argv[1]).pixel_array
-frame = int(input("Enter desired frame to view: "))
-r = d_pix_arr.shape[1] # number of rows of pixels in image
-c = d_pix_arr.shape[2] # number of columns of pixels in image
-img = d_pix_arr[frame]
-q = 'n'
-# Draw correct ROI
-while q == 'n' or q == 'N':
+if __name__ == "__main__":
+	d_pix_arr = pydicom.dcmread(sys.argv[1]).pixel_array
+	frame = int(input("Enter desired frame to view: "))
+	r = d_pix_arr.shape[1] # number of rows of pixels in image
+	c = d_pix_arr.shape[2] # number of columns of pixels in image
+	img = d_pix_arr[frame]
+	# Draw correct ROI
 	roi = draw_roi(img, r, c)
-	q = input("Is this ROI correct? y/n: ")
-	while True:
-		if q == 'y' or q == 'Y' or q == 'n' or q == 'N':
-			break
-		else:
-			print('Please enter y or n')
-# Initialize mask
-start_time = time.time()
-mask = get_mask(roi, r, c)
-# Use mask to extract correct info
-masked_dcm = np.zeros([r, c, 3])
-dcm_vid_framed = d_pix_arr[frame]
-frame_all = d_pix_arr.shape[0]
-grayed = np.zeros([frame_all, r, c])
-grayed_avg = np.zeros([frame_all, 1])
-for n in np.arange(frame_all):
-	for i in np.arange(r):
-		for j in np.arange(c):
-			if mask[i][j] == 1:
-			 	# masked_dcm[i][j] = dcm_vid_framed[i][j]
-				masked_dcm[i][j] = d_pix_arr[n][i][j]
-	g_frame = rgb2gray(masked_dcm)
-	g_frame_avg = np.mean(g_frame)
-	grayed[n] = g_frame
-	grayed_avg[n] = g_frame_avg
-# gray_masked_dcm = rgb2gray(masked_dcm)
-# print(gray_masked_dcm.shape)
-print(grayed.shape)
-print(grayed_avg.shape)
-plt.plot(np.arange(frame_all),grayed_avg)
-plt.show()
+	# Initialize mask
+	start_time = time.time()
+	mask = get_mask(roi, r, c)
+	# Use mask to extract correct info
+	masked_dcm = np.zeros([r, c, 3])
+	dcm_vid_framed = d_pix_arr[frame]
+	frame_all = d_pix_arr.shape[0]
+	grayed = np.zeros([frame_all, r, c])
+	grayed_avg = np.zeros([frame_all, 1])
+	for n in np.arange(frame_all):
+		for i in np.arange(r):
+			for j in np.arange(c):
+				if mask[i][j] == 1:
+				 	# masked_dcm[i][j] = dcm_vid_framed[i][j]
+					masked_dcm[i][j] = d_pix_arr[n][i][j]
+		g_frame = rgb2gray(masked_dcm)
+		g_frame_avg = np.mean(g_frame)
+		grayed[n] = g_frame
+		grayed_avg[n] = g_frame_avg
+	# gray_masked_dcm = rgb2gray(masked_dcm)
+	# print(gray_masked_dcm.shape)
+	print("--- %s seconds to run get_mask in a loop---" % (time.time() - start_time))
 
-print("--- %s seconds to run get_mask in a loop---" % (time.time() - start_time))
-# gray_masked_dcm = rgb2gray(masked_dcm)
+	print(grayed.shape)
+	print(grayed_avg.shape)
+	plt.plot(np.arange(frame_all),grayed_avg)
+	plt.show()
 
-# Test plots and info
-plt.figure(1)
-plt.subplot(121)
-plt.imshow(img)
+	# Test plots and info
+	plt.figure(1)
+	plt.subplot(121)
+	plt.imshow(img)
 
-plt.subplot(122)
-plt.imshow(grayed[1], cmap = 'gray')
-plt.show()
-#
-# mean_masked_dcm = np.mean(grayed[1])
-# print(mean_masked_dcm)
+	plt.subplot(122)
+	plt.imshow(grayed[1], cmap = 'gray')
+	plt.show()
 
-# Plot the mean vs frames
-# plt.plot(np.arange(number_frames), gray_dcm_mean)
-# plt.show()
+	print(grayed_avg[1])
