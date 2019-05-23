@@ -32,23 +32,25 @@ def get_mask(drawn_roi, row, col, dcm_vid, frame_n):
 	#
 	# Variables :
 	# drawn_roi : ROI created using ROIPolygon
+
 	masked_dcm = np.zeros([row, col, 3])
 	drawn_roi_path = drawn_roi.path
 	dcm_vid_framed = dcm_vid[frame_n]
-	# for i in np.arange(row):
-	# 	for j in np.arange(col):
-	# 		if drawn_roi_path.contains_points([(j,i)]) == True:
-	# 			 masked_dcm[i][j] = dcm_vid_framed[i][j]
-	# for i,j in np.ndindex(row, col):
-	# 	if drawn_roi_path.contains_points([(j,i)]) == True:
-	# 		masked_dcm[i][j] = dcm_vid_framed[i][j]
-	mask = np.zeros([row,col,3])
 	for i in np.arange(row):
 		for j in np.arange(col):
 			if drawn_roi_path.contains_points([(j,i)]) == True:
 				 masked_dcm[i][j] = dcm_vid_framed[i][j]
-	mask = np.where(drawn_roi_path.contains_points() == True)
-
+	# for i,j in np.ndindex(row, col):
+	# 	if drawn_roi_path.contains_points([(j,i)]) == True:
+	# 		masked_dcm[i][j] = dcm_vid_framed[i][j]
+	# mask = np.zeros([row, col], dtype = int)
+	# for i in np.arange(row):
+	# 	for j in np.arange(col):
+	# 		 if drawn_roi_path.contains_points([(j,i)]) == [True]:
+	# 			 mask[i][j] = 1
+	# mask_swap_axes = np.swapaxes(mask,0,1)
+	# masked_img = dcm_vid_framed[np.where(mask_swap_axes == 1)]
+	# return masked_img
 	return masked_dcm
 
 # Converting rgb image to grayscale.
@@ -104,33 +106,33 @@ start_time = time.time()
 # 	for j in np.arange(c):
 # 		mask[i][j] = roi.path.contains_points([(j,i)]) #writes True as 1, False as 0
 # print(roi.path.contains_points([(200,300),[100,300]]))
-# gray_masked_dcm = rgb2gray(get_mask(roi, r, c, d_pix_arr, frame))
+gray_masked_dcm = rgb2gray(get_mask(roi, r, c, d_pix_arr, frame))
 
 # Loop through all frames in video
-gray_dcm_mean = []
-number_frames = d_pix_arr.shape[0]
-index = 0
-for i in np.arange(number_frames):
-	g = rgb2gray(get_mask(roi, r, c, d_pix_arr, i))
-	avg = np.mean(g)
-	gray_dcm_mean.append(avg)
-	index += 1
-	print(index)
+# gray_dcm_mean = []
+# number_frames = d_pix_arr.shape[0]
+# index = 0
+# for i in np.arange(number_frames):
+# 	g = rgb2gray(get_mask(roi, r, c, d_pix_arr, i))
+# 	avg = np.mean(g)
+# 	gray_dcm_mean.append(avg)
+# 	index += 1
+# 	print(index)
 
 print("--- %s seconds to run get_mask in a loop---" % (time.time() - start_time))
 # gray_masked_dcm = rgb2gray(masked_dcm)
 
 # Test plots and info
-# plt.figure(1)
-# plt.subplot(121)
-# plt.imshow(img)
-#
-# plt.subplot(122)
-# plt.imshow(gray_masked_dcm, cmap = 'gray')
-# plt.show()
+plt.figure(1)
+plt.subplot(121)
+plt.imshow(img)
 
-# mean_masked_dcm = np.mean(gray_masked_dcm)
-# print(mean_masked_dcm)
+plt.subplot(122)
+plt.imshow(gray_masked_dcm, cmap = 'gray')
+plt.show()
+
+mean_masked_dcm = np.mean(gray_masked_dcm)
+print(mean_masked_dcm)
 
 # Plot the mean vs frames
 # plt.plot(np.arange(number_frames), gray_dcm_mean)
