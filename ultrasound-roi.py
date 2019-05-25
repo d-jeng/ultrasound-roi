@@ -35,14 +35,14 @@ def draw_roi(img, row, col):
 
 		roi = ROIPolygon(ax, row, col)
 
-		plt.imshow(img)
+		plt.imshow(img, cmap = 'gray')
 		plt.show()
 		# Overlaying ROI onto image
 		patch = patches.PathPatch(roi.path,
 								facecolor = 'green',
 								alpha = 0.5)
 		fig, ax = plt.subplots()
-		plt.imshow(img)
+		plt.imshow(img, cmap = 'gray')
 		ax.add_patch(patch)
 		plt.show(block = False)
 
@@ -70,26 +70,12 @@ def get_mask(pydcm_frame, drawn_roi, row, col):
 # Extract image info based on mask
 # Returns average of
 def mask_extract(pydcm, mask, frame_all, row, col):
-	# masked_dcm = np.zeros([row, col])
-	# gray_all_frames = np.zeros([frame_all, row, col]) # grayscale images for all frames
 	gray_frame_avg = np.zeros([frame_all, 1]) # for avg brightness per frame
-	# for n in np.arange(frame_all):
-	# 	for i in np.arange(row):
-	# 		for j in np.arange(col):
-	# 			if mask[i][j] == 1:
-	# 				masked_dcm[i][j] = pydcm[n][i][j]
-	# 	g_frame = rgb2gray(masked_dcm)
-	# 	g_frame_avg = np.mean(g_frame)
-	# 	gray_all_frames[n] = g_frame
-	# 	gray_frame_avg[n] = g_frame_avg
 	for n in np.arange(frame_all):
 		temp_dcm = pydcm[n]
 		extracted = np.ma.MaskedArray(temp_dcm, mask)
-		temp_ex_arr = extracted.compressed()
-		print(extracted.compressed().shape)
 		gray_frame_avg[n] = np.mean(extracted.compressed())
 	return gray_frame_avg
-	# return gray_all_frames, gray_frame_avg
 
 # Converting rgb image to grayscale.
 def rgb2gray(rgb):
@@ -108,12 +94,7 @@ def dcm_rgb2gray(dcm, frame_all, row, col):
 if __name__ == "__main__":
 	frame = int(input("Enter desired frame to view: "))
 
-	# d_pix_arr = pydicom.dcmread(sys.argv[1]).pixel_array
-	from PIL import Image
-	pix = Image.open('test.png')
-	pix_arr = np.asarray(pix)
-	print(pix_arr)
-	d_pix_arr = np.stack((pix_arr, pix_arr),axis=0)
+	d_pix_arr = pydicom.dcmread(sys.argv[1]).pixel_array
 
 	frame_all = d_pix_arr.shape[0] # total number of frames in the dicom file
 	r = d_pix_arr.shape[1] # number of rows of pixels in image
@@ -121,7 +102,6 @@ if __name__ == "__main__":
 
 	# Convert RGB dicom array to grayscale
 	d_pix_arr = dcm_rgb2gray(d_pix_arr,frame_all, r, c)
-	# print(d_pix_arr.shape)
 
 	# Draw ROI
 	img = d_pix_arr[frame]
@@ -130,13 +110,9 @@ if __name__ == "__main__":
 	# Initialize mask
 	start_time = time.time()
 	mask = get_mask(img, roi, r, c)
-	print(mask.shape)
-	# print(np.sum(mask))
-	print(mask)
 
 	# Use mask to extract correct info
 	grayed_avg = mask_extract(d_pix_arr, mask, frame_all, r, c)
-	# grayed, grayed_avg = mask_extract(d_pix_arr, mask, frame_all, r, c)
 	print("--- %s seconds to run get_mask in a loop---" % (time.time() - start_time))
 	# print(grayed.shape)
 	# print(grayed_avg.shape)
