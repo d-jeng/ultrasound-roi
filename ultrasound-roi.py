@@ -55,14 +55,14 @@ def draw_roi(img, row, col):
 	return roi
 
 # To initialize mask
-def get_mask(drawn_roi, row, col):
+def get_mask(pydcm_frame, drawn_roi, row, col):
 	# matplotlib.Path.contains_points returns True if the point is inside the ROI
 	# Path vertices are considered in different order than numpy arrays
 	mask = np.zeros([row, col], dtype = int)
 	for i in np.arange(row):
 		for j in np.arange(col):
-			 if drawn_roi.path.contains_points([(j,i)]) == [True]:
-				 mask[i][j] = 1
+			 if np.logical_and(drawn_roi.path.contains_points([(j,i)]) == [True], pydcm_frame[i][j] > 0):
+				 mask[i][j] = 1 #provides any points inside path
 	mask_bool = mask.astype(bool)
 	mask_bool = ~mask_bool #invert Trues and Falses
 	return mask_bool
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
 	# Initialize mask
 	start_time = time.time()
-	mask = get_mask(roi, r, c)
+	mask = get_mask(img, roi, r, c)
 	print(mask.shape)
 	# print(np.sum(mask))
 	print(mask)
